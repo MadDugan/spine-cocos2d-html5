@@ -54,23 +54,16 @@ cc.SkeletonAnimation = cc.Skeleton.extend({
 		cc.Assert(stateData, "stateData cannot be null.");
 
 		var state = this.states[stateIndex];
-/*	
-		for (std::vector<AnimationStateData*>::iterator iter = stateDatas.begin(); iter != stateDatas.end(); ++iter) {
-			if (state.data == *iter) {
-				state.data.dispose();
-				stateDatas.erase(iter);
-				break;
-			}
-		}
-		for (std::vector<AnimationState*>::iterator iter = states.begin(); iter != states.end(); ++iter) {
-			if (state == *iter) {
-				states.erase(iter);
-				break;
-			}
-		}
 		
-		state.dispose();
-*/
+		for(var i=0;i<this.stateDatas.length;i++) {
+			if (state.data == this.stateDatas[i]) {
+				this.stateDatas.splice(i, 1);
+				break;
+			}
+		}
+
+		this.states.splice(stateIndex, 1);
+		
 		state = new spine.AnimationState(stateData);
 		this.states[stateIndex] = state;	
 	},
