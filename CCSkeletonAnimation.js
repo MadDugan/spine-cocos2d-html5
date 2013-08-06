@@ -49,9 +49,11 @@ cc.SkeletonAnimation = cc.Skeleton.extend({
 		var state = new spine.AnimationState(stateData);
 		this.states.push(state);	
 	},
-	setAnimationStateData: function (stateData, stateIndex = 0){
+	setAnimationStateData: function (stateData, stateIndex){
+		stateIndex = stateIndex || 0;
 		cc.Assert(stateIndex >= 0 && stateIndex < this.states.length, "stateIndex out of range.");
 		cc.Assert(stateData, "stateData cannot be null.");
+		
 
 		var state = this.states[stateIndex];
 		
@@ -67,23 +69,28 @@ cc.SkeletonAnimation = cc.Skeleton.extend({
 		state = new spine.AnimationState(stateData);
 		this.states[stateIndex] = state;	
 	},
-	getAnimationState: function (stateIndex = 0){
+	getAnimationState: function (stateIndex){
+		stateIndex = stateIndex || 0;
 		cc.Assert(stateIndex >= 0 && stateIndex < this.states.length, "stateIndex out of range.");
 		return this.states[stateIndex];	
 	},
-	setMix: function (fromAnimation, toAnimation, duration, stateIndex = 0){
+	setMix: function (fromAnimation, toAnimation, duration, stateIndex){
+		stateIndex = stateIndex || 0;
 		cc.Assert(stateIndex >= 0 && stateIndex < this.states.length, "stateIndex out of range.");
 		this.states[stateIndex].data.setMixByName(fromAnimation, toAnimation, duration);	
 	},
-	setAnimation: function (name, loop, stateIndex = 0){
+	setAnimation: function (name, loop, stateIndex){
+		stateIndex = stateIndex || 0;
 		cc.Assert(stateIndex >= 0 && stateIndex < this.states.length, "stateIndex out of range.");
 		this.states[stateIndex].setAnimationByName(name, loop);	
 	},
-	addAnimation: function (name, loop, delay, stateIndex = 0){
+	addAnimation: function (name, loop, delay, stateIndex){
+		stateIndex = stateIndex || 0;
 		cc.Assert(stateIndex >= 0 && stateIndex < this.states.length, "stateIndex out of range.");
 		this.states[stateIndex].addAnimationByName(name, loop, delay);	
 	},
-	clearAnimation: function (stateIndex = 0){
+	clearAnimation: function (stateIndex){
+		stateIndex = stateIndex || 0;
 		cc.Assert(stateIndex >= 0 && stateIndex < this.states.length, "stateIndex out of range.");
 		this.states[stateIndex].clearAnimation();	
 	}
@@ -98,7 +105,8 @@ cc.SkeletonAnimation.createWithData = function (skeletonData) {
     return null;	
 };
 
-cc.SkeletonAnimation.createWithFile = function (skeletonURL, atlasURL, scale = 1){
+cc.SkeletonAnimation.createWithFile = function (skeletonURL, atlasURL, scale){
+	scale = scale || 1;
 	var c = new cc.SkeletonAnimation();
 
 	var atlasText = cc.FileUtils.getInstance().getTextFileData(atlasURL);

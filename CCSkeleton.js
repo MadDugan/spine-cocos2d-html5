@@ -28,7 +28,7 @@ cc.Skeleton = cc.NodeRGBA.extend({
 		this._super();
 		
 		this.debugSlots = false;
-		this.debugBones = true;
+		this.debugBones = false;
 		this.timeScale = 1;
 
 		this._blendFunc = {src:gl.ONE, dst:gl.ONE_MINUS_SRC_ALPHA};
@@ -238,7 +238,10 @@ cc.Skeleton = cc.NodeRGBA.extend({
 });
 
 /* untested */
-cc.Skeleton.createWithData = function (skeletonData, ownsSkeletonData = false) {
+cc.Skeleton.createWithData = function (skeletonData, ownsSkeletonData) {
+
+	ownsSkeletonData = ownsSkeletonData || false;
+	
 	var c = new cc.Skeleton();
     if (c && c.initWithData(skeletonData, ownsSkeletonData)) {
         return c;
@@ -276,7 +279,10 @@ cc.Skeleton.createWithFile = function (skeletonURL, atlasURL, scale){
     return null;
 };
 
-function RegionAttachment_updateQuad(self, slot, quad, premultipliedAlpha = false) {
+function RegionAttachment_updateQuad(self, slot, quad, premultipliedAlpha) {
+	
+	premultipliedAlpha = premultipliedAlpha || false;
+	
 	var vertices = [];
 
 	self.computeVertices(slot.skeleton.x, slot.skeleton.y, slot.bone, vertices);
