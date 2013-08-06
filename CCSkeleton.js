@@ -87,11 +87,11 @@ cc.Skeleton = cc.NodeRGBA.extend({
 			}
 			textureAtlas = regionTextureAtlas;
 		
-			if (textureAtlas.getCapacity() == textureAtlas.getTotalQuads() &&
+			if (textureAtlas.getCapacity() == textureAtlas._totalQuads && // BUG #2484
 				!textureAtlas.resizeCapacity(textureAtlas.getCapacity() * 2))
 				return;
 			RegionAttachment_updateQuad(attachment, slot, quad, this.premultipliedAlpha);
-			textureAtlas.updateQuad(quad, i);
+			textureAtlas.updateQuad(quad, textureAtlas._totalQuads); // BUG #2484
 		}
 
 		if (textureAtlas) {

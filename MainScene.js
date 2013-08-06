@@ -34,11 +34,10 @@ var MainLayer = cc.LayerColor.extend({
 
 		ccSkelNode.skeleton.setSlotsToSetupPose();
 		ccSkelNode.setMix("walk", "jump", 0.2);
-		ccSkelNode.setMix("jump", "walk", 0.4);		
+		ccSkelNode.setMix("jump", "walk", 0.4);
+		
 		ccSkelNode.setAnimation("walk", true);
-		//ccSkelNode.addAnimation("jump", false, 0);
-		ccSkelNode.addAnimation("walk", true, 0);
-	
+
 		ccSkelNode.skeleton.getRootBone().x = 0;
 		ccSkelNode.skeleton.getRootBone().y = 0;
 		
