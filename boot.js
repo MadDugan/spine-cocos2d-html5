@@ -1,7 +1,7 @@
 (function () {
     var d = document;
     var c = {
-        COCOS2D_DEBUG:2,
+        COCOS2D_DEBUG:0,
         box2d:false,
         chipmunk:false,
         showFPS:true,
@@ -9,7 +9,7 @@
         loadExtension:false,
         tag:'gameCanvas',
 
-        SingleEngineFile:'Cocos2d-html5-v2.1.5.min.js',
+        SingleEngineFile:'Cocos2d-html5-v2.1.3.min.js',
 		//engineDir:'cocos2d/',
         appFiles:[
             './resource.js',
