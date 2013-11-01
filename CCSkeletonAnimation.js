@@ -3,96 +3,91 @@
 * https://github.com/EsotericSoftware/spine-runtimes/tree/master/spine-cocos2dx
 *
 * File:           CCSkeletonAnimaiton.js
-* Version:        1.0.0
+* Version:        1.1.0
 * Last changed:   2013/08/05
 * Purpose:        Base Animation container for Spine animation
 * Author:         J White
 * Copyright:      (C) 2013, Snop.com
 *
-* THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY 
+* THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
 * KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
 * IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
 * PARTICULAR PURPOSE.
 ******************************************************************************/
 
+function callback(state, trackIndex, type, event, loopCount) {
+	state.context.onAnimationStateEvent(trackIndex, type, event, loopCount);
+}
+
 cc.SkeletonAnimation = cc.Skeleton.extend({
-	states:null,
-	stateDatas:null,
+	state:null,
+	ownsAnimationStateData:false,
+	listenerInstance:null,
+	listenerMethod:null,
 	init: function () {
 		this._super();
-		this.states = [];
-		this.stateDatas = [];
+
+		var stateData = new spine.AnimationStateData(this.skeleton.data);
+		this.state = new spine.AnimationState(stateData);
 	},
-	initWithData: function (skeletonData) {
-		this.init();
-		return this._super(skeletonData, false);
+	initWithData: function (skeletonData, ownsSkeletonData) {
+		return this._super(skeletonData, ownsSkeletonData);
 	},
 	update: function (deltaTime){
-	
 		this._super(deltaTime);
-		
+
 		deltaTime *= this.timeScale;
-		
-		for (var i=0;i<this.states.length; i++) {
-			this.states[i].update(deltaTime);
-			this.states[i].apply(this.skeleton);
-		}
-		
-		this.skeleton.updateWorldTransform();	
+		this.state.update(deltaTime);
+		this.state.apply(this.skeleton);
+		this.skeleton.updateWorldTransform();
 	},
-	addAnimationState: function (stateData){
-		if (!stateData) {
-			stateData = new spine.AnimationStateData(this.skeleton.data);
-			this.stateDatas.push(stateData);
-		}
-		
-		var state = new spine.AnimationState(stateData);
-		this.states.push(state);	
-	},
-	setAnimationStateData: function (stateData, stateIndex){
-		stateIndex = stateIndex || 0;
-		cc.Assert(stateIndex >= 0 && stateIndex < this.states.length, "stateIndex out of range.");
+	setAnimationStateData: function (stateData){
 		cc.Assert(stateData, "stateData cannot be null.");
-		
 
-		var state = this.states[stateIndex];
-		
-		for(var i=0;i<this.stateDatas.length;i++) {
-			if (state.data == this.stateDatas[i]) {
-				this.stateDatas.splice(i, 1);
-				break;
-			}
-		}
+		if (this.ownsAnimationStateData) this.state.data = null;
 
-		this.states.splice(stateIndex, 1);
-		
+		this.ownsAnimationStateData = true;
 		state = new spine.AnimationState(stateData);
-		this.states[stateIndex] = state;	
+		state.context = this;
+		state.listener = callback;
 	},
-	getAnimationState: function (stateIndex){
-		stateIndex = stateIndex || 0;
-		cc.Assert(stateIndex >= 0 && stateIndex < this.states.length, "stateIndex out of range.");
-		return this.states[stateIndex];	
+	setMix: function (fromAnimation, toAnimation, duration){
+		this.state.data.setMixByName(fromAnimation, toAnimation, duration);
 	},
-	setMix: function (fromAnimation, toAnimation, duration, stateIndex){
-		stateIndex = stateIndex || 0;
-		cc.Assert(stateIndex >= 0 && stateIndex < this.states.length, "stateIndex out of range.");
-		this.states[stateIndex].data.setMixByName(fromAnimation, toAnimation, duration);	
+	setAnimationListener: function (instance, method) {
+		this.listenerInstance = instance;
+		this.listenerMethod = method;
 	},
-	setAnimation: function (name, loop, stateIndex){
-		stateIndex = stateIndex || 0;
-		cc.Assert(stateIndex >= 0 && stateIndex < this.states.length, "stateIndex out of range.");
-		this.states[stateIndex].setAnimationByName(name, loop);	
+	setAnimation: function (trackIndex, name, loop){
+		var animation = this.skeleton.data.findAnimation(name);
+		if (!animation) {
+			cc.log("Spine: Animation not found: %s", name);
+			return 0;
+		}
+		return this.state.setAnimation(trackIndex, animation, loop);
 	},
-	addAnimation: function (name, loop, delay, stateIndex){
-		stateIndex = stateIndex || 0;
-		cc.Assert(stateIndex >= 0 && stateIndex < this.states.length, "stateIndex out of range.");
-		this.states[stateIndex].addAnimationByName(name, loop, delay);	
+	addAnimation: function (trackIndex, name, loop, delay){
+		delay = delay || 0;
+		var animation = this.skeleton.data.findAnimation(name);
+		if (!animation) {
+			cc.log("Spine: Animation not found: %s", name);
+			return 0;
+		}
+		return this.state.addAnimation(trackIndex, animation, loop, delay);
 	},
-	clearAnimation: function (stateIndex){
-		stateIndex = stateIndex || 0;
-		cc.Assert(stateIndex >= 0 && stateIndex < this.states.length, "stateIndex out of range.");
-		this.states[stateIndex].clearAnimation();	
+	getCurrent: function (trackIndex) {
+		trackIndex = trackIndex || 0;
+		return this.state.getCurrent(trackIndex);
+	},
+	clearTracks: function () {
+		this.state.clearTracks();
+	},
+	clearTrack: function (trackIndex) {
+		trackIndex = trackIndex || 0;
+		this.state.clearTrack(trackIndex);
+	},
+	onAnimationStateEvent: function  ( trackIndex, type, event, loopCount) {
+		if (this.listenerInstance) this.listenerMethod(this, trackIndex, type, event, loopCount);
 	}
 });
 
@@ -102,7 +97,7 @@ cc.SkeletonAnimation.createWithData = function (skeletonData) {
     if (c && c.initWithData(skeletonData, false)) {
         return c;
     }
-    return null;	
+    return null;
 };
 
 cc.SkeletonAnimation.createWithFile = function (skeletonURL, atlasURL, scale){
@@ -127,13 +122,12 @@ cc.SkeletonAnimation.createWithFile = function (skeletonURL, atlasURL, scale){
 
 	var json = new spine.SkeletonJson(new spine.AtlasAttachmentLoader(atlas));
 	var skeletonDataFile = cc.FileUtils.getInstance().getTextFileData(skeletonURL);
-	
+
 	var skeletonData = json.readSkeletonData(JSON.parse(skeletonDataFile));
 
     if (c && c.initWithData(skeletonData, true)) {
-		c.addAnimationState(null);
         return c;
     }
 
-    return null;	
+    return null;
 };

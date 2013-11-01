@@ -3,13 +3,13 @@
 * https://github.com/EsotericSoftware/spine-runtimes/tree/master/spine-cocos2dx
 *
 * File:           CCSkeleton.js
-* Version:        1.0.0
+* Version:        1.1.0
 * Last changed:   2013/08/05
-* Purpose:        Base skeleton container for Spine animation 
+* Purpose:        Base skeleton container for Spine animation
 * Author:         J White
 * Copyright:      (C) 2013, Snop.com
 *
-* THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY 
+* THIS CODE AND INFORMATION ARE PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
 * KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
 * IMPLIED WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
 * PARTICULAR PURPOSE.
@@ -23,26 +23,31 @@ cc.Skeleton = cc.NodeRGBA.extend({
 	debugBones:false,
 	premultipliedAlpha:false,
 	ownsSkeletonData:false,
+	atlas:null,
 	_blendFunc:null,
 	init: function () {
 		this._super();
-		
+
 		this.debugSlots = false;
 		this.debugBones = false;
 		this.timeScale = 1;
 
-		this._blendFunc = {src:gl.ONE, dst:gl.ONE_MINUS_SRC_ALPHA};
+		this._blendFunc = {src:cc.BLEND_SRC, dst:cc.BLEND_DST};
+
 		this.setOpacityModifyRGB(true);
 
 		this.setShaderProgram(cc.ShaderCache.getInstance().programForKey(cc.SHADER_POSITION_TEXTURECOLOR));
 		this.scheduleUpdate();
 	},
 	initWithData: function (skeletonData, ownsSkeletonData) {
-		this.init();
-		
 		this.setSkeletonData(skeletonData, ownsSkeletonData);
-		
+		this.init();
 		return true;
+	},
+	setSkeletonData: function (skeletonData, ownsSkeletonData){
+		this.skeleton = new spine.Skeleton(skeletonData);
+		this.rootBone = this.skeleton.getRootBone();
+		this.ownsSkeletonData = ownsSkeletonData;
 	},
 	update: function (deltaTime){
 		this.skeleton.update(deltaTime * this.timeScale);
@@ -54,7 +59,7 @@ cc.Skeleton = cc.NodeRGBA.extend({
 		cc.NODE_DRAW_SETUP(this);
 
 		cc.glBlendFunc(this._blendFunc.src, this._blendFunc.dst);
-		
+
 		var color = this.getColor();
 		this.skeleton.r = color.r / 255.0;
 		this.skeleton.g = color.g / 255.0;
@@ -66,49 +71,57 @@ cc.Skeleton = cc.NodeRGBA.extend({
 			this.skeleton.b *= this.skeleton.a;
 		}
 
+		var additive = undefined;
 		var quad = new cc.V3F_C4B_T2F_Quad();
 		quad.tl.vertices.z = 0;
 		quad.tr.vertices.z = 0;
 		quad.bl.vertices.z = 0;
 		quad.br.vertices.z = 0;
-		
+
 		for (var i = 0, n = this.skeleton.slots.length; i < n; i++) {
-			var slot = this.skeleton.slots[i];
+			var slot = this.skeleton.drawOrder[i];
 			if (!slot.attachment || !(slot.attachment instanceof spine.RegionAttachment)){
 				continue;
 			}
 			var attachment = slot.attachment;
 			var regionTextureAtlas = this.getTextureAtlas(attachment);
-			if (regionTextureAtlas != textureAtlas) {
+
+			if (slot.data.additiveBlending != additive) {
 				if (textureAtlas) {
 					textureAtlas.drawQuads();
 					textureAtlas.removeAllQuads();
 				}
+				additive = additive ? undefined : true;
+				cc.glBlendFunc(this._blendFunc.src, additive ? gl.ONE : this._blendFunc.dst);
+			} else if (regionTextureAtlas != textureAtlas && textureAtlas) {
+				textureAtlas.drawQuads();
+				textureAtlas.removeAllQuads();
 			}
 			textureAtlas = regionTextureAtlas;
-		
-			if (textureAtlas.getCapacity() == textureAtlas._totalQuads && // BUG #2484
+
+			if (textureAtlas.getCapacity() == textureAtlas.getTotalQuads() &&
 				!textureAtlas.resizeCapacity(textureAtlas.getCapacity() * 2))
 				return;
+
 			RegionAttachment_updateQuad(attachment, slot, quad, this.premultipliedAlpha);
-			textureAtlas.updateQuad(quad, textureAtlas._totalQuads); // BUG #2484
+			textureAtlas.updateQuad(quad, textureAtlas.getTotalQuads());
 		}
 
 		if (textureAtlas) {
 			textureAtlas.drawQuads();
-			textureAtlas.removeAllQuads();			
+			textureAtlas.removeAllQuads();
 		}
-		
+
 		if (this.debugSlots) {
 			// Slots.
 			//ccDrawColor4B(0, 0, 255, 255);
 			cc.renderContext.fillStyle = "rgba(0,0,255,1)";
-			cc.renderContext.strokeStyle = "rgba(0,0,255,1)";				
+			cc.renderContext.strokeStyle = "rgba(0,0,255,1)";
 			//glLineWidth(1);
 			var points = [];
 			var quad = new cc.V3F_C4B_T2F_Quad();
 			for (var i = 0, n = this.skeleton.slots.length; i < n; i++) {
-				var slot = this.skeleton.slots[i];
+				var slot = this.skeleton.drawOrder[i];
 				if (!slot.attachment || !(slot.attachment instanceof spine.RegionAttachment)) continue;
 				var attachment = slot.attachment;
 				RegionAttachment_updateQuad(attachment, slot, quad);
@@ -118,15 +131,15 @@ cc.Skeleton = cc.NodeRGBA.extend({
 				points[3] = cc.p(quad.tl.vertices.x, quad.tl.vertices.y);
 				cc.drawingUtil.drawPoly(points, 4, true);
 			}
-		}		
-		
+		}
+
 		if (this.debugBones) {
 			// Bone lengths.
 			//gl.lineWidth(2);
 			cc.renderContext.lineWidth = "2";
 			//cc.DrawColor4B(255, 0, 0, 255);
 			cc.renderContext.fillStyle = "rgba(255,0,0,1)";
-			cc.renderContext.strokeStyle = "rgba(255,0,0,1)";			
+			cc.renderContext.strokeStyle = "rgba(255,0,0,1)";
 			for (var i = 0, n = this.skeleton.bones.length; i < n; i++) {
 				var bone = this.skeleton.bones[i];
 				var x = bone.data.length * bone.m00 + bone.worldX;
@@ -137,17 +150,20 @@ cc.Skeleton = cc.NodeRGBA.extend({
 //			cc.pointSize(4);
 //			cc.DrawColor4B(0, 0, 255, 255); // Root bone is blue.
 			cc.renderContext.fillStyle = "rgba(0,0,255,1)";
-			cc.renderContext.strokeStyle = "rgba(0,0,255,1)";				
+			cc.renderContext.strokeStyle = "rgba(0,0,255,1)";
 			for (var i = 0, n = this.skeleton.bones.length; i < n; i++) {
 				var bone = this.skeleton.bones[i];
 				cc.drawingUtil.drawCircle(cc.p(bone.worldX, bone.worldY), 4, 0, 16, false);
-				if (i == 0){ 
+				if (i == 0){
 					//cc.DrawColor4B(0, 255, 0, 255);
 					cc.renderContext.fillStyle = "rgba(0,255,0, 1)";
-					cc.renderContext.strokeStyle = "rgba(0,255,0, 1)";						
+					cc.renderContext.strokeStyle = "rgba(0,255,0, 1)";
 				}
 			}
-		}		
+		}
+	},
+	getTextureAtlas: function (regionAttachment){
+		return regionAttachment.rendererObject.page.rendererObject;
 	},
 	boundingBox: function (){
 		var minX = Number.POSITIVE_INFINITY, minY = Number.POSITIVE_INFINITY, maxX = Number.NEGATIVE_INFINITY, maxY = Number.NEGATIVE_INFINITY;
@@ -225,15 +241,6 @@ cc.Skeleton = cc.NodeRGBA.extend({
 	},
 	isOpacityModifyRGB: function (){
 		return this.premultipliedAlpha;
-	},
-
-	setSkeletonData: function (skeletonData, ownsSkeletonData){
-		this.skeleton = new spine.Skeleton(skeletonData);
-		this.rootBone = this.skeleton.getRootBone();
-		this.ownsSkeletonData = ownsSkeletonData;
-	},
-	getTextureAtlas: function (regionAttachment){
-		return regionAttachment.rendererObject.page.rendererObject;
 	}
 });
 
@@ -241,7 +248,7 @@ cc.Skeleton = cc.NodeRGBA.extend({
 cc.Skeleton.createWithData = function (skeletonData, ownsSkeletonData) {
 
 	ownsSkeletonData = ownsSkeletonData || false;
-	
+
 	var c = new cc.Skeleton();
     if (c && c.initWithData(skeletonData, ownsSkeletonData)) {
         return c;
@@ -251,11 +258,12 @@ cc.Skeleton.createWithData = function (skeletonData, ownsSkeletonData) {
 
 /* untested */
 cc.Skeleton.createWithFile = function (skeletonURL, atlasURL, scale){
+	scale = scale || 1;
 	var c = new cc.Skeleton();
 
 	var atlasText = cc.FileUtils.getInstance().getTextFileData(atlasURL);
 
-	var atlas = new spine.Atlas(atlasText, {
+	this.atlas = new spine.Atlas(atlasText, {
 		load: function (page, path) {
 			var texture = cc.TextureCache.getInstance().addImage(dirData + path);
 			var textureAtlas = cc.TextureAtlas.createWithTexture(texture, 4);
@@ -269,8 +277,10 @@ cc.Skeleton.createWithFile = function (skeletonURL, atlasURL, scale){
 		}
 	});
 
-	var json = new spine.SkeletonJson(new spine.AtlasAttachmentLoader(atlas));
+	var json = new spine.SkeletonJson(new spine.AtlasAttachmentLoader(this.atlas));
+	json.scale = scale;
 	var skeletonDataFile = cc.FileUtils.getInstance().getTextFileData(skeletonURL);
+
 	var skeletonData = json.readSkeletonData(JSON.parse(skeletonDataFile));
 
     if (c && c.initWithData(skeletonData, true)) {
@@ -280,9 +290,9 @@ cc.Skeleton.createWithFile = function (skeletonURL, atlasURL, scale){
 };
 
 function RegionAttachment_updateQuad(self, slot, quad, premultipliedAlpha) {
-	
+
 	premultipliedAlpha = premultipliedAlpha || false;
-	
+
 	var vertices = [];
 
 	self.computeVertices(slot.skeleton.x, slot.skeleton.y, slot.bone, vertices);
