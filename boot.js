@@ -8,9 +8,14 @@
         frameRate:60,
         loadExtension:false,
         tag:'gameCanvas',
+<<<<<<< HEAD
 
         SingleEngineFile:'Cocos2d-html5-v2.1.3.min.js',
 		//engineDir:'cocos2d/',
+=======
+		//renderMode:0,
+        SingleEngineFile:'Cocos2d-html5-v2.2.min.js',
+>>>>>>> Updated to latest version of Spine.js and Cocos2d-html5 v2.2
         appFiles:[
             './resource.js',
 			'./MainScene.js',
